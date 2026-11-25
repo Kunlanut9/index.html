@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ร้านบะหมี่กึ่งสำเร็จรูป 006 - สั่งซื้อ & จัดการพัสดุ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-label, #printable-label * { visibility: visible; }
+      #printable-label { position: absolute; left: 0; top: 0; width: 100%; border: 2px solid #000; }
+    }
+  </style>
+</head>
+<body class="bg-amber-50 text-gray-800 font-sans">
+
+  <!-- Navbar -->
+  <header class="bg-red-600 text-white shadow-md sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold">🍜 บะหมี่กึ่งสำเร็จรูป 006</h1>
+      <div class="space-x-2">
+        <button onclick="switchTab('store')" id="btn-store" class="bg-white text-red-600 px-4 py-1.5 rounded-lg font-semibold text-sm">หน้าร้านสั่งซื้อ</button>
+        <button onclick="switchTab('warehouse')" id="btn-warehouse" class="bg-red-700 hover:bg-red-800 text-white px-4 py-1.5 rounded-lg font-semibold text-sm">หยิบ-แพ็ค & จ่าหน้าพัสดุ</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION 1: LANDING PAGE & ORDER FORM -->
+  <main id="section-store" class="max-w-5xl mx-auto px-4 py-8">
+    <section class="text-center mb-10">
+      <span class="bg-amber-200 text-amber-900 text-xs font-bold px-3 py-1 rounded-full">อร่อยเข้มข้น พร้อมส่งทั่วไทย</span>
+      <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mt-3">เส้นเหนียวนุ่ม น้ำซุปถึงเครื่อง</h2>
+      <p class="text-gray-600 mt-2">เลือกสั่งซื้อบะหมี่กึ่งสำเร็จรูปแพ็ค 5 ซอง บันทึกออเดอร์ตรงเข้าสู่ระบบคลังสินค้าทันที</p>
+    </section>
+
+    <!-- Product Grid (3 SKUs from GitHub /images folder) -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12" id="product-list"></section>
+
+    <!-- Order Form -->
+    <section id="order-box" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 max-w-2xl mx-auto border border-amber-200">
+      <h3 class="text-2xl font-bold text-gray-900 mb-4">🛒 ฟอร์มสั่งซื้อสินค้า</h3>
+      <form id="orderForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">เลือกรสชาติ (SKU)</label>
+          <select id="skuSelect" class="w-full border rounded-lg p-2.5 bg-gray-50" required></select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">จำนวน (แพ็ค)</label>
+            <input type="number" id="qtyInput" value="1" min="1" max="50" class="w-full border rounded-lg p-2.5" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">ยอดรวมชำระ (บาท)</label>
+            <input type="text" id="totalPreview" class="w-full border rounded-lg p-2.5 bg-gray-100 font-bold text-red-600" readonly />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">ชื่อ-นามสกุล ผู้รับ</label>
+            <input type="text" id="custName" placeholder="เช่น สมชาย ใจดี" class="w-full border rounded-lg p-2.5" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">เบอร์โทรศัพท์</label>
+            <input type="tel" id="custPhone" placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5" required />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">ที่อยู่จัดส่ง (บ้านเลขที่ / ซอย / ถนน / แขวง-ตำบล / เขต-อำเภอ / จังหวัด)</label>
+          <textarea id="custAddress" rows="2" placeholder="กรอกที่อยู่ให้ครบถ้วนสำหรับจ่าหน้าพัสดุ" class="w-full border rounded-lg p-2.5" required></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">รหัสไปรษณีย์</label>
+          <input type="text" id="custZip" placeholder="เช่น 10110" maxlength="5" class="w-full border rounded-lg p-2.5" required />
+        </div>
+        <button type="submit" id="submitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow transition">
+          ยืนยันการสั่งซื้อ (บันทึกลง Google Sheet)
+        </button>
+      </form>
+      <div id="orderStatus" class="mt-4 text-center font-semibold"></div>
+    </section>
+  </main>
+
+  <!-- SECTION 2: PICK, PACK & SHIPPING LABEL -->
+  <section id="section-warehouse" class="max-w-5xl mx-auto px-4 py-8 hidden">
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">📦 ระบบหยิบสินค้า แพ็คสินค้า และใบจ่าหน้าพัสดุ</h2>
+        <p class="text-sm text-gray-600">ดึงข้อมูลคำสั่งซื้อจาก Google Sheet เพื่อจัดเตรียมพัสดุให้ลูกค้าอย่างถูกต้อง</p>
+      </div>
+      <button onclick="loadOrders()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold text-sm">🔄 โหลดออเดอร์ล่าสุด</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Order List -->
+      <div class="bg-white rounded-xl shadow p-4 border">
+        <h3 class="font-bold text-lg mb-3">รายการคำสั่งซื้อในระบบ</h3>
+        <div id="ordersList" class="space-y-3 max-h-[500px] overflow-y-auto text-sm">
+          <p class="text-gray-500">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+
+      <!-- Pick List & Shipping Label Preview -->
+      <div>
+        <div id="printable-label" class="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-800">
+          <div class="flex justify-between items-center border-b-2 border-gray-800 pb-3 mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider bg-gray-900 text-white px-2 py-0.5 rounded">PICK & PACK SLIP</span>
+              <h3 class="text-xl font-extrabold mt-1" id="lbl-order-id">เลือกออเดอร์ด้านซ้าย</h3>
+            </div>
+            <div class="text-right text-xs text-gray-600" id="lbl-date">-</div>
+          </div>
+
+          <!-- Step 1: Picking List -->
+          <div class="bg-amber-50 border border-amber-300 rounded-lg p-3 mb-4">
+            <p class="text-xs font-bold text-amber-900 mb-1">1. รายการหยิบสินค้า (PICKING LIST)</p>
+            <p class="font-bold text-base" id="lbl-sku">-</p>
+            <p class="text-sm" id="lbl-product">-</p>
+            <p class="text-lg font-extrabold text-red-600 mt-1" id="lbl-qty">จำนวน: -</p>
+          </div>
+
+          <!-- Step 2: Shipping Label -->
+          <div class="border border-dashed border-gray-500 rounded-lg p-4">
+            <p class="text-xs font-bold text-gray-500 mb-2">2. ใบจ่าหน้าพัสดุ (SHIPPING LABEL)</p>
+            <div class="text-xs text-gray-600 border-b pb-2 mb-2">
+              <strong>ผู้ส่ง:</strong> ร้านบะหมี่กึ่งสำเร็จรูป 006 (โทร. 02-000-0006)
+            </div>
+            <div class="space-y-1">
+              <p class="text-base font-bold" id="lbl-name">ผู้รับ: -</p>
+              <p class="text-sm font-semibold" id="lbl-phone">โทร: -</p>
+              <p class="text-sm leading-relaxed" id="lbl-address">ที่อยู่: -</p>
+              <p class="text-xl font-extrabold tracking-widest mt-2 bg-gray-100 inline-block px-3 py-1 rounded" id="lbl-zip">รหัสไปรษณีย์: -----</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="window.print()" class="mt-4 w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl shadow">
+          🖨️ พิมพ์ใบหยิบสินค้าและใบจ่าหน้าพัสดุ
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // *** วางลิงก์ Web App URL จาก Google Apps Script ตรงนี้ ***
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywIvnWRHNmbGqCo3YKpvXapU0QV-wPwzWVlVJ66N5trMTjmaOoZ7He3SSaHgLXEYw/exec";
+
+    const PRODUCTS = [
+      { sku: "NOODLE-001", name: "บะหมี่กึ่งสำเร็จรูป รสต้มยำกุ้งน้ำข้น (แพ็ค 5 ซอง)", desc: "เส้นเหนียวนุ่ม น้ำซุปต้มยำกุ้งน้ำข้นถึงเครื่องสมุนไพร", price: 45, img: "images/noodle-tomyum.jpg" },
+      { sku: "NOODLE-002", name: "บะหมี่กึ่งสำเร็จรูป รสหมูสับต้นตำรับ (แพ็ค 5 ซอง)", desc: "น้ำซุปกลมกล่อม หอมกลิ่นกระเทียมเจียวและหมูสับ", price: 40, img: "images/noodle-mincedpork.jpg" },
+      { sku: "NOODLE-003", name: "บะหมี่กึ่งสำเร็จรูป รสหมาล่าเผ็ดชา (แพ็ค 5 ซอง)", desc: "ซุปหมาล่าเข้มข้น เผ็ดชาสะใจสไตล์เสฉวน", price: 55, img: "images/noodle-mala.jpg" }
+    ];
+
+    function initStore() {
+      const list = document.getElementById("product-list");
+      const select = document.getElementById("skuSelect");
+      PRODUCTS.forEach((p, idx) => {
+        list.innerHTML += `
+          <div class="bg-white rounded-2xl shadow overflow-hidden border border-gray-100 flex flex-col">
+            <img src="${p.img}" alt="${p.name}" class="w-full h-48 object-cover bg-amber-100" onerror="this.src='https://placehold.co/400x300?text=${p.sku}'">
+            <div class="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">${p.sku}</span>
+                <h3 class="font-bold text-lg mt-2">${p.name}</h3>
+                <p class="text-sm text-gray-600 mt-1">${p.desc}</p>
+              </div>
+              <div class="mt-4 flex items-center justify-between">
+                <span class="text-xl font-extrabold text-gray-900">฿${p.price}</span>
+                <button onclick="selectProduct(${idx})" class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-3 py-1.5 rounded-lg">เลือกสั่งรสนี้</button>
+              </div>
+            </div>
+          </div>`;
+        select.innerHTML += `<option value="${idx}">${p.sku} - ${p.name} (${p.price} บาท)</option>`;
+      });
+      updateTotal();
+    }
+
+    function selectProduct(idx) {
+      document.getElementById("skuSelect").value = idx;
+      updateTotal();
+      document.getElementById("order-box").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function updateTotal() {
+      const p = PRODUCTS[document.getElementById("skuSelect").value];
+      const qty = Number(document.getElementById("qtyInput").value || 1);
+      document.getElementById("totalPreview").value = (p.price * qty) + " บาท";
+    }
+
+    document.getElementById("skuSelect").addEventListener("change", updateTotal);
+    document.getElementById("qtyInput").addEventListener("input", updateTotal);
+
+    document.getElementById("orderForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      const status = document.getElementById("orderStatus");
+      const p = PRODUCTS[document.getElementById("skuSelect").value];
+
+      const payload = {
+        Customer_Name: document.getElementById("custName").value,
+        Phone: document.getElementById("custPhone").value,
+        Shipping_Address: document.getElementById("custAddress").value,
+        Postal_Code: document.getElementById("custZip").value,
+        SKU_ID: p.sku,
+        Product_Name: p.name,
+        Quantity: document.getElementById("qtyInput").value,
+        Unit_Price: p.price
+      };
+
+      btn.disabled = true;
+      btn.textContent = "กำลังบันทึกคำสั่งซื้อ...";
+      try {
+        const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+        const result = await res.json();
+        status.className = "mt-4 text-center font-semibold text-green-600";
+        status.textContent = `✅ สั่งซื้อสำเร็จ! รหัสคำสั่งซื้อของคุณคือ ${result.orderId} (บันทึกลง Google Sheet เรียบร้อย)`;
+        document.getElementById("orderForm").reset();
+        updateTotal();
+      } catch (err) {
+        status.className = "mt-4 text-center font-semibold text-red-600";
+        status.textContent = "❌ เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบลิงก์ SCRIPT_URL";
+      }
+      btn.disabled = false;
+      btn.textContent = "ยืนยันการสั่งซื้อ (บันทึกลง Google Sheet)";
+    });
+
+    function switchTab(tab) {
+      document.getElementById("section-store").classList.toggle("hidden", tab !== "store");
+      document.getElementById("section-warehouse").classList.toggle("hidden", tab !== "warehouse");
+      if (tab === "warehouse") loadOrders();
+    }
+
+    let cachedOrders = [];
+    async function loadOrders() {
+      const container = document.getElementById("ordersList");
+      container.innerHTML = "<p class='text-gray-500'>กำลังดึงข้อมูลจาก Google Sheet...</p>";
+      try {
+        const res = await fetch(SCRIPT_URL);
+        const data = await res.json();
+        cachedOrders = data.orders.reverse();
+        container.innerHTML = cachedOrders.map((o, i) => `
+          <div onclick="showLabel(${i})" class="p-3 border rounded-lg hover:bg-amber-50 cursor-pointer flex justify-between items-center">
+            <div>
+              <span class="font-bold text-red-600">${o.Order_ID}</span> - <span class="font-semibold">${o.Customer_Name}</span>
+              <p class="text-xs text-gray-600">${o.SKU_ID} | จำนวน ${o.Quantity} แพ็ค</p>
+            </div>
+            <span class="text-xs bg-gray-100 px-2 py-1 rounded font-medium">${o.Fulfillment_Status}</span>
+          </div>
+        `).join("");
+        if (cachedOrders.length > 0) showLabel(0);
+      } catch (e) {
+        container.innerHTML = "<p class='text-red-600'>ไม่สามารถโหลดข้อมูลได้ (ตรวจสอบการตั้งค่า SCRIPT_URL)</p>";
+      }
+    }
+
+    function showLabel(idx) {
+      const o = cachedOrders[idx];
+      document.getElementById("lbl-order-id").textContent = "Order: " + o.Order_ID;
+      document.getElementById("lbl-date").textContent = o.Order_Date;
+      document.getElementById("lbl-sku").textContent = "SKU: " + o.SKU_ID;
+      document.getElementById("lbl-product").textContent = o.Product_Name;
+      document.getElementById("lbl-qty").textContent = "จำนวนที่ต้องหยิบ: " + o.Quantity + " แพ็ค";
+      document.getElementById("lbl-name").textContent = "ผู้รับ: " + o.Customer_Name;
+      document.getElementById("lbl-phone").textContent = "โทร: " + o.Phone;
+      document.getElementById("lbl-address").textContent = "ที่อยู่: " + o.Shipping_Address;
+      document.getElementById("lbl-zip").textContent = "รหัสไปรษณีย์: " + o.Postal_Code;
+    }
+
+    initStore();
+  </script>
+</body>
+</html>
